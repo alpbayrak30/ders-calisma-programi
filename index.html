@@ -8,6 +8,8 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- HTML'den Görsel (PNG) Oluşturmak İçin html2canvas Kütüphanesi -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- PDF Oluşturmak İçin jsPDF Kütüphanesi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -82,9 +84,13 @@
                     <i data-lucide="image" class="w-4 h-4"></i>
                     <span class="hidden sm:inline">Görsel İndir (PNG)</span>
                 </button>
+                <button onclick="downloadScheduleAsPDF()" class="flex items-center space-x-2 px-3 py-1.5 text-xs sm:text-sm font-medium bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-200 transition duration-200">
+                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">PDF İndir</span>
+                </button>
                 <button onclick="window.print()" class="flex items-center space-x-2 px-3 py-1.5 text-xs sm:text-sm font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg border border-slate-200 transition duration-200">
                     <i data-lucide="printer" class="w-4 h-4"></i>
-                    <span class="hidden sm:inline">Yazdır / PDF</span>
+                    <span class="hidden sm:inline">Yazdır</span>
                 </button>
                 <button onclick="resetData()" class="flex items-center space-x-2 px-3 py-1.5 text-xs sm:text-sm font-medium bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg border border-rose-200 transition duration-200">
                     <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
@@ -221,9 +227,13 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-3 text-xs text-slate-600">
-                    <button onclick="downloadScheduleAsImage()" class="no-print flex items-center space-x-1 px-2.5 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md border border-slate-300 transition mr-2">
-                        <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                        <span>Resim Olarak İndir</span>
+                    <button onclick="downloadScheduleAsImage()" class="no-print flex items-center space-x-1 px-2.5 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md border border-slate-300 transition">
+                        <i data-lucide="image" class="w-3.5 h-3.5"></i>
+                        <span>PNG İndir</span>
+                    </button>
+                    <button onclick="downloadScheduleAsPDF()" class="no-print flex items-center space-x-1 px-2.5 py-1 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-md border border-indigo-200 transition">
+                        <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                        <span>PDF İndir</span>
                     </button>
                     <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-emerald-100 border border-emerald-400 mr-1.5"></span> Tamamlandı</span>
                     <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-indigo-100 border border-indigo-400 mr-1.5"></span> Bekliyor</span>
@@ -231,7 +241,7 @@
             </div>
 
             <!-- Schedule Grid Table -->
-            <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <div id="tableScrollContainer" class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
                 <table class="w-full text-left border-collapse min-w-[900px]">
                     <thead>
                         <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-bold border-b border-slate-200">
@@ -757,31 +767,81 @@
             document.getElementById('statPercent').innerText = `%${percent}`;
         }
 
-        // Tabloyu Görsel (PNG) Olarak İndirme Fonksiyonu
-        function downloadScheduleAsImage() {
+        // Tabloyu tam genişlikte yakalamak için yardımcı fonksiyon
+        async function captureFullScheduleCanvas() {
             const targetElement = document.getElementById('scheduleSection');
+            const scrollContainer = document.getElementById('tableScrollContainer');
             
-            // Görsel oluşturulurken düzenleme butonlarını gizle
+            // Gizlenecek elementleri kaldır (butonlar vb.)
             const noPrintElements = targetElement.querySelectorAll('.no-print');
             noPrintElements.forEach(el => el.style.display = 'none');
 
-            html2canvas(targetElement, {
-                scale: 2, // Yüksek çözünürlük kalitesi
+            // Ekran genişliği yetersizse taşmayı engellemek adına stilleri sakla
+            const origOverflow = scrollContainer.style.overflow;
+            const origWidth = scrollContainer.style.width;
+            
+            // Tablonun gerçek genişliğini zorunlu kıl
+            scrollContainer.style.overflow = 'visible';
+            scrollContainer.style.width = 'auto';
+
+            const canvas = await html2canvas(targetElement, {
+                scale: 2, // Yüksek çözünürlük
                 backgroundColor: '#ffffff',
-                useCORS: true
-            }).then(canvas => {
+                useCORS: true,
+                windowWidth: Math.max(document.documentElement.scrollWidth, 1200)
+            });
+
+            // Orijinal stillere dön
+            scrollContainer.style.overflow = origOverflow;
+            scrollContainer.style.width = origWidth;
+            noPrintElements.forEach(el => el.style.display = '');
+
+            return canvas;
+        }
+
+        // Tabloyu Görsel (PNG) Olarak İndirme
+        async function downloadScheduleAsImage() {
+            try {
+                const canvas = await captureFullScheduleCanvas();
                 const link = document.createElement('a');
                 link.download = `Ders_Calisma_Programi_${new Date().toISOString().slice(0,10)}.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
-
-                // Gizlenen elemanları geri göster
-                noPrintElements.forEach(el => el.style.display = '');
-            }).catch(err => {
+            } catch (err) {
                 console.error('Görsel oluşturulurken hata oluştu:', err);
                 alert('Görsel indirilirken bir hata oluştu.');
-                noPrintElements.forEach(el => el.style.display = '');
-            });
+            }
+        }
+
+        // Tabloyu PDF Olarak İndirme
+        async function downloadScheduleAsPDF() {
+            try {
+                const canvas = await captureFullScheduleCanvas();
+                const imgData = canvas.toDataURL('image/png');
+                
+                const { jsPDF } = window.jspdf;
+                // Yatay düzen (landscape)
+                const pdf = new jsPDF('l', 'mm', 'a4');
+                
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                
+                const imgWidth = canvas.width;
+                const imgHeight = canvas.height;
+                
+                const ratio = Math.min((pdfWidth - 10) / imgWidth, (pdfHeight - 10) / imgHeight);
+                const width = imgWidth * ratio;
+                const height = imgHeight * ratio;
+                
+                const x = (pdfWidth - width) / 2;
+                const y = (pdfHeight - height) / 2;
+                
+                pdf.addImage(imgData, 'PNG', x, y, width, height);
+                pdf.save(`Ders_Calisma_Programi_${new Date().toISOString().slice(0,10)}.pdf`);
+            } catch (err) {
+                console.error('PDF oluşturulurken hata oluştu:', err);
+                alert('PDF indirilirken bir hata oluştu.');
+            }
         }
     </script>
 </body>
