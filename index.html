@@ -230,31 +230,7 @@
         </section>
 
         <!-- STEP 3: Weekly Schedule Grid Container -->
-        <section id="scheduleSection" class="glass-card rounded-2xl p-6 bg-white w-full">
-            <!-- Student Information Header Block -->
-            <div class="bg-gradient-to-r from-slate-50 via-indigo-50/20 to-slate-50 rounded-xl p-4 mb-6 border border-slate-200 shadow-sm w-full">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-                    <div class="flex items-center space-x-3 bg-white p-3 rounded-lg border border-slate-200">
-                        <div class="p-2 bg-indigo-600 text-white rounded-lg flex-shrink-0">
-                            <i data-lucide="user" class="w-5 h-5"></i>
-                        </div>
-                        <div class="w-full min-w-0">
-                            <label for="studentName" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Öğrenci Adı Soyadı</label>
-                            <input type="text" id="studentName" oninput="saveStudentInfo()" placeholder="Örn: Ahmet Yılmaz" class="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
-                        </div>
-                    </div>
-                    <div class="flex items-center space-x-3 bg-white p-3 rounded-lg border border-slate-200">
-                        <div class="p-2 bg-indigo-600 text-white rounded-lg flex-shrink-0">
-                            <i data-lucide="graduation-cap" class="w-5 h-5"></i>
-                        </div>
-                        <div class="w-full min-w-0">
-                            <label for="studentClass" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Sınıfı / Bölümü</label>
-                            <input type="text" id="studentClass" oninput="saveStudentInfo()" placeholder="Örn: 12-A / Sayısal" class="w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
+        <section id="scheduleSection" class="glass-card rounded-2xl p-6 bg-white">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-200">
                 <div class="flex items-center space-x-2">
                     <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">2</div>
@@ -450,8 +426,6 @@
         
         // Application State
         let state = {
-            studentName: "",
-            studentClass: "",
             grade: "12",
             track: "sayisal",
             activeSubjects: [],
@@ -470,12 +444,6 @@
             updateStats();
         }
 
-        function saveStudentInfo() {
-            state.studentName = document.getElementById('studentName').value;
-            state.studentClass = document.getElementById('studentClass').value;
-            saveData();
-        }
-
         // Save & Load LocalStorage
         function saveData() {
             localStorage.setItem('study_tracker_state_v2', JSON.stringify(state));
@@ -487,8 +455,6 @@
             if (saved) {
                 try {
                     state = JSON.parse(saved);
-                    if (state.studentName) document.getElementById('studentName').value = state.studentName;
-                    if (state.studentClass) document.getElementById('studentClass').value = state.studentClass;
                 } catch(e) {
                     console.error("Localstorage read error:", e);
                 }
@@ -508,20 +474,16 @@
             }
         }
 
-        // Tüm verileri sıfırlama
+        // Tüm verileri (sınıf, ders seçimleri dahil) sıfırlama
         function resetData() {
             if (confirm("Tüm ders programınız ve ayarlarınız tamamen sıfırlanacaktır. Emin misiniz?")) {
                 localStorage.removeItem('study_tracker_state_v2');
                 state = {
-                    studentName: "",
-                    studentClass: "",
                     grade: "12",
                     track: "sayisal",
                     activeSubjects: [],
                     tasks: []
                 };
-                document.getElementById('studentName').value = "";
-                document.getElementById('studentClass').value = "";
                 document.getElementById('gradeSelect').value = "12";
                 document.getElementById('trackSelect').value = "sayisal";
                 initApp();
@@ -559,6 +521,7 @@
 
             document.getElementById('activeProfileLabel').innerText = trackObj.title;
 
+            // Update subject checklist
             if (!isInitial || !state.activeSubjects || state.activeSubjects.length === 0) {
                 state.activeSubjects = [...trackObj.subjects];
             }
@@ -829,52 +792,32 @@
             document.getElementById('statPercent').innerText = `%${percent}`;
         }
 
-        // Çıktı alma esnasında input alanlarını düzgün metne dönüştüren fonksiyon
+        // Tabloyu tam genişlikte ve taşmadan yakalamak için optimize edilmiş fonksiyon
         async function captureFullScheduleCanvas() {
             const targetElement = document.getElementById('scheduleSection');
             const scrollContainer = document.getElementById('tableScrollContainer');
             
-            // Gizlenecek buton vb. alanları sakla
+            // Gizlenecek elementleri (butonlar vb.) sakla
             const noPrintElements = targetElement.querySelectorAll('.no-print');
             noPrintElements.forEach(el => el.style.display = 'none');
 
-            // Form input alanlarını canvas için geçici metin kutularına çevir
-            const nameInput = document.getElementById('studentName');
-            const classInput = document.getElementById('studentClass');
-
-            const nameVal = nameInput.value || 'Girilmedi';
-            const classVal = classInput.value || 'Girilmedi';
-
-            const nameSpan = document.createElement('div');
-            nameSpan.className = 'w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 text-sm font-semibold text-slate-800';
-            nameSpan.innerText = nameVal;
-
-            const classSpan = document.createElement('div');
-            classSpan.className = 'w-full bg-slate-50 border border-slate-200 rounded-md px-3 py-1.5 text-sm font-semibold text-slate-800';
-            classSpan.innerText = classVal;
-
-            nameInput.parentNode.replaceChild(nameSpan, nameInput);
-            classInput.parentNode.replaceChild(classSpan, classInput);
-
-            // Genişlik düzenlemesi yap
+            // Ekran küçüklüğünden kaynaklı kırpılmayı önlemek için geçici sabit genişlik ver
             const origContainerStyle = scrollContainer.getAttribute('style') || '';
             const origTargetStyle = targetElement.getAttribute('style') || '';
 
+            // Sabit 1280px tuval genişliğinde render al
             scrollContainer.style.overflow = 'visible';
             scrollContainer.style.width = '1200px';
             targetElement.style.width = '1280px';
 
             const canvas = await html2canvas(targetElement, {
-                scale: 2,
+                scale: 2, // Yüksek çözünürlük
                 backgroundColor: '#ffffff',
                 useCORS: true,
                 windowWidth: 1300
             });
 
-            // Orijinal görünümü ve inputları geri yükle
-            nameSpan.parentNode.replaceChild(nameInput, nameSpan);
-            classSpan.parentNode.replaceChild(classInput, classSpan);
-
+            // Orijinal stillere dön
             scrollContainer.setAttribute('style', origContainerStyle);
             targetElement.setAttribute('style', origTargetStyle);
             noPrintElements.forEach(el => el.style.display = '');
@@ -903,6 +846,7 @@
                 const imgData = canvas.toDataURL('image/png');
                 
                 const { jsPDF } = window.jspdf;
+                // Yatay sayfa düzeni (landscape)
                 const pdf = new jsPDF('l', 'mm', 'a4');
                 
                 const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -911,43 +855,25 @@
                 const imgWidth = canvas.width;
                 const imgHeight = canvas.height;
                 
-                const margin = 8;
+                // Kenar boşluklarıyla sayfaya sığdır
+                const margin = 10;
                 const availableWidth = pdfWidth - (margin * 2);
-                const availableHeight = pdfHeight - (Görsel ve PDF indirildiğinde öğrenci adı soyadı ile sınıf bilgilerinin kesilmesi, metin kutularının (`<input>`) `html2canvas` tarafından tuvale dönüştürülürken dinamik genişlik kaybına uğraması ve taşıyıcı konteynırın esnek (responsive) yapısının yüksek çözünürlüklü çıktı modunda hizayı kaybetmesinden kaynaklanır.
+                const availableHeight = pdfHeight - (margin * 2);
 
-Bu hatayı düzeltmek için yapılan teknik güncellemeler:
-
-1. **İnput Hücrelerinin Sabit Genişliğe Alınması:** Öğrenci Adı Soyadı ve Sınıfı/Şubesi alanları, çıktı tuvalinde taşmayı önlemek adına esnek grid düzeninden net genişlik değerlerine (`w-full` yerine iç dolguyla korunan yapılar) dönüştürüldü.
-2. **Yüksek Çözünürlük ve Taşma Kontrolü:** İndirme fonksiyonunda (`captureFullScheduleCanvas`) tuval oluşturulurken üst bilgi kartı ile tablo aynı genişlik alanına (`1280px`) kilitlendi ve metinlerin girdi kutuları içinde kaybolmaması sağlandı.
-3. **Yazdırma ve PDF Kenar Boşlukları:** PDF çıktısında `A4` yatay sayfa boyutuna göre ölçeklendirme oranı ve kenar payları yeniden hesaplanarak metin kesilmelerinin önüne geçildi.
-
-Aşağıdaki kod bloklarını mevcut dosyanızdaki ilgili kısımlarla değiştirerek sorunu çözebilirsiniz:
-
-### 1. HTML Tarafındaki Öğrenci Bilgisi Alanı (Değiştirilecek Bölüm)
-
-`scheduleSection` kimlikli bölümün hemen altındaki öğrenci kartını şu yapı ile güncelleyin:
-
-```html
-<!-- Student Information Header Block -->
-<div id="studentInfoBlock" class="bg-gradient-to-r from-slate-50 to-indigo-50/30 rounded-xl p-4 mb-6 border border-slate-200/80 shadow-sm w-full box-border">
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-        <div class="flex items-center space-x-3 bg-white p-2.5 rounded-lg border border-slate-200">
-            <div class="p-2 bg-indigo-600 text-white rounded-lg flex-shrink-0">
-                <i data-lucide="user" class="w-5 h-5"></i>
-            </div>
-            <div class="flex-grow min-w-0">
-                <label for="studentName" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Öğrenci Adı Soyadı</label>
-                <input type="text" id="studentName" oninput="saveStudentInfo()" placeholder="Örn: Ahmet Yılmaz" class="w-full text-sm font-semibold text-slate-800 focus:outline-none bg-transparent border-b border-transparent focus:border-indigo-500 transition">
-            </div>
-        </div>
-        <div class="flex items-center space-x-3 bg-white p-2.5 rounded-lg border border-slate-200">
-            <div class="p-2 bg-indigo-600 text-white rounded-lg flex-shrink-0">
-                <i data-lucide="graduation-cap" class="w-5 h-5"></i>
-            </div>
-            <div class="flex-grow min-w-0">
-                <label for="studentClass" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">Sınıfı / Şubesi</label>
-                <input type="text" id="studentClass" oninput="saveStudentInfo()" placeholder="Örn: 12-A / Sayısal" class="w-full text-sm font-semibold text-slate-800 focus:outline-none bg-transparent border-b border-transparent focus:border-indigo-500 transition">
-            </div>
-        </div>
-    </div>
-</div>
+                const ratio = Math.min(availableWidth / imgWidth, availableHeight / imgHeight);
+                const width = imgWidth * ratio;
+                const height = imgHeight * ratio;
+                
+                const x = (pdfWidth - width) / 2;
+                const y = (pdfHeight - height) / 2;
+                
+                pdf.addImage(imgData, 'PNG', x, y, width, height);
+                pdf.save(`Ders_Calisma_Programi_${new Date().toISOString().slice(0,10)}.pdf`);
+            } catch (err) {
+                console.error('PDF oluşturulurken hata oluştu:', err);
+                alert('PDF indirilirken bir hata oluştu.');
+            }
+        }
+    </script>
+</body>
+</html>
