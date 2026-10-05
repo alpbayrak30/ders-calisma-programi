@@ -8,6 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- html2canvas (Ekran Görüntüsü / Tablo İndirme Kütüphanesi) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -30,7 +32,6 @@
         body {
             font-family: 'Inter', sans-serif;
         }
-        /* Custom Scrollbar for Light Theme */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -58,10 +59,15 @@
                 </div>
                 <div>
                     <h1 class="font-bold text-lg text-slate-900 leading-tight">Ders Planlayıcı</h1>
-                    <p class="text-xs text-slate-500">Haftalık Çalışma Programı Takip Sistem</p>
+                    <p class="text-xs text-slate-500">Haftalık Çalışma Programı Takip Sistemi</p>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
+                <!-- Tabloyu Resim Olarak İndir Butonu -->
+                <button onclick="downloadScheduleImage()" class="px-3 py-1.5 text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white rounded-lg transition shadow-sm flex items-center gap-1.5">
+                    <i data-lucide="image" class="w-4 h-4"></i>
+                    Çizelgeyi İndir (PNG)
+                </button>
                 <button onclick="exportData()" class="px-3 py-1.5 text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg transition border border-slate-200 flex items-center gap-1.5">
                     <i data-lucide="download" class="w-4 h-4"></i>
                     Yedek İndir
@@ -89,10 +95,9 @@
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <!-- Sınıf Düzeyi Seçimi -->
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Sınıf Düzeyi</label>
-                        <select id="gradeSelect" onchange="handleGradeChange()" class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition">
+                        <select id="gradeSelect" onchange="handleGradeChange()" class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-brand-500 outline-none transition">
                             <option value="12">12. Sınıf</option>
                             <option value="11">11. Sınıf</option>
                             <option value="10">10. Sınıf</option>
@@ -100,20 +105,16 @@
                         </select>
                     </div>
 
-                    <!-- Bölüm / Grup Seçimi -->
                     <div id="trackSelectContainer">
                         <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Alan / Sınav Grubu</label>
-                        <select id="trackSelect" onchange="handleTrackChange()" class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition">
-                            <!-- Populated dynamically -->
+                        <select id="trackSelect" onchange="handleTrackChange()" class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-brand-500 outline-none transition">
                         </select>
                     </div>
                 </div>
 
-                <!-- Seçilebilir Aktif Dersler Listesi -->
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-2">Atanabilir Ders Listesi</label>
                     <div id="activeSubjectsList" class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-200">
-                        <!-- Dynamic Tags -->
                     </div>
                 </div>
             </div>
@@ -155,12 +156,12 @@
             </div>
         </div>
 
-        <!-- Weekly Schedule Table -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <!-- Weekly Schedule Table Container (İndirilecek Alan) -->
+        <div id="scheduleContainer" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-1">
             <div class="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-4 bg-slate-50/50">
                 <div>
                     <h3 class="font-bold text-slate-800 text-base">Haftalık Ders Çalışma Çizelgesi</h3>
-                    <p class="text-xs text-slate-500">Hafta içi 16:00 sonrası, hafta sonu tüm gün seçenekleriyle zaman dilimlerine ders atayın.</p>
+                    <p class="text-xs text-slate-500">Hafta içi 16:00 sonrası, hafta sonu tüm gün zaman dilimleri.</p>
                 </div>
                 <div class="flex items-center gap-3 text-xs font-medium">
                     <span class="flex items-center gap-1.5"><span class="w-3 h-3 bg-brand-100 border border-brand-300 rounded"></span> TYT</span>
@@ -184,14 +185,13 @@
                         </tr>
                     </thead>
                     <tbody id="scheduleTbody" class="divide-y divide-slate-200 text-sm">
-                        <!-- Dynamic Grid Rendering -->
                     </tbody>
                 </table>
             </div>
         </div>
     </main>
 
-    <!-- Modal for Adding/Editing Task -->
+    <!-- Task Modal -->
     <div id="taskModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-100 space-y-4">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
@@ -208,13 +208,12 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Ders Seçin</label>
                     <select id="modalSubjectSelect" class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-brand-500 outline-none">
-                        <!-- Dynamic choices based on current grade/track -->
                     </select>
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Konu / Çalışma Detayı</label>
-                    <input type="text" id="modalTopic" placeholder="Örn: Paragraf Çözümü, Soru Bankası Test 3" class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-brand-500 outline-none">
+                    <input type="text" id="modalTopic" placeholder="Örn: Paragraf Çözümü, Test 3" class="w-full bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-brand-500 outline-none">
                 </div>
 
                 <div>
@@ -243,9 +242,8 @@
         </div>
     </div>
 
-    <!-- Application Script -->
+    <!-- Application Logic -->
     <script>
-        // Data Structures for Curriculums
         const CURRICULUM_DATA = {
             "12": {
                 tracks: {
@@ -315,18 +313,15 @@
             { id: 'pazar', title: 'Pazar', isWeekend: true }
         ];
 
-        // Hours Definition
         const WEEKDAY_HOURS = ["16:00 - 17:00", "17:00 - 18:00", "18:00 - 19:00", "19:00 - 20:00", "20:00 - 21:00", "21:00 - 22:00", "22:00 - 23:00"];
         const WEEKEND_HOURS = ["08:00 - 09:00", "09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00", "12:00 - 13:00", "13:00 - 14:00", "14:00 - 15:00", "15:00 - 16:00", "16:00 - 17:00", "17:00 - 18:00", "18:00 - 19:00", "19:00 - 20:00", "20:00 - 21:00", "21:00 - 22:00", "22:00 - 23:00"];
 
-        // State Management
         let appState = {
             grade: "12",
             track: "sayisal",
-            schedule: {} // Key format: `${dayId}_${slotIndex}`
+            schedule: {}
         };
 
-        // Initialize App
         document.addEventListener("DOMContentLoaded", () => {
             loadFromLocalStorage();
             handleGradeChange(false);
@@ -335,7 +330,6 @@
             lucide.createIcons();
         });
 
-        // Event Handler: Grade Change
         function handleGradeChange(resetTrack = true) {
             const grade = document.getElementById("gradeSelect").value;
             appState.grade = grade;
@@ -367,14 +361,12 @@
             saveToLocalStorage();
         }
 
-        // Event Handler: Track Change
         function handleTrackChange() {
             appState.track = document.getElementById("trackSelect").value;
             renderSubjectTags();
             saveToLocalStorage();
         }
 
-        // Render Current Curriculum Tags
         function renderSubjectTags() {
             const container = document.getElementById("activeSubjectsList");
             container.innerHTML = "";
@@ -397,7 +389,6 @@
             });
         }
 
-        // Render Schedule Table
         function renderScheduleTable() {
             const tbody = document.getElementById("scheduleTbody");
             tbody.innerHTML = "";
@@ -407,19 +398,16 @@
             for (let i = 0; i < maxSlots; i++) {
                 const tr = document.createElement("tr");
 
-                // Time Slot Label Cell
                 const timeTd = document.createElement("td");
                 timeTd.className = "p-2.5 text-xs text-center font-semibold text-slate-500 border-r border-slate-200 bg-slate-50/80 sticky left-0";
                 timeTd.textContent = WEEKEND_HOURS[i];
                 tr.appendChild(timeTd);
 
-                // Day Cells
                 DAYS.forEach(day => {
                     const td = document.createElement("td");
                     td.className = `p-1.5 border-r border-slate-200 vertical-top h-20 w-36 relative transition hover:bg-slate-50/80 ${day.isWeekend ? 'bg-amber-50/20' : ''}`;
 
                     if (!day.isWeekend && i < (WEEKEND_HOURS.length - WEEKDAY_HOURS.length)) {
-                        // Restricted weekday hours
                         td.className += " bg-slate-100/50 cursor-not-allowed";
                         td.innerHTML = `<div class="h-full w-full flex items-center justify-center text-[10px] text-slate-400 font-medium select-none">Ders Dışı Saat</div>`;
                     } else {
@@ -470,7 +458,35 @@
             lucide.createIcons();
         }
 
-        // Modal Management
+        // TABLOYU GÖRSEL (PNG) OLARAK İNDİRME FONKSİYONU
+        function downloadScheduleImage() {
+            const container = document.getElementById("scheduleContainer");
+            
+            // Kullanıcıya bildirim göster
+            const btn = event.currentTarget;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Hazırlanıyor...`;
+            lucide.createIcons();
+
+            html2canvas(container, {
+                scale: 2, // Yüksek çözünürlük
+                useCORS: true,
+                backgroundColor: "#ffffff"
+            }).then(canvas => {
+                const link = document.createElement("a");
+                link.download = `Ders_Calisma_Programim_${appState.grade}_Sinif.png`;
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+                
+                btn.innerHTML = originalText;
+                lucide.createIcons();
+            }).catch(err => {
+                alert("Resim oluşturulurken bir hata meydana geldi.");
+                btn.innerHTML = originalText;
+                lucide.createIcons();
+            });
+        }
+
         function openModal(dayId, slotIndex) {
             const cellKey = `${dayId}_${slotIndex}`;
             const task = appState.schedule[cellKey];
@@ -478,7 +494,6 @@
             document.getElementById("modalDay").value = dayId;
             document.getElementById("modalSlot").value = slotIndex;
 
-            // Populate Subject Selector
             const subjectSelect = document.getElementById("modalSubjectSelect");
             subjectSelect.innerHTML = "";
 
@@ -564,7 +579,6 @@
             }
         }
 
-        // Stats Calculation
         function updateStats() {
             const tasks = Object.values(appState.schedule);
             const total = tasks.length;
@@ -577,7 +591,6 @@
             document.getElementById("progressBar").style.width = `${rate}%`;
         }
 
-        // LocalStorage & Export/Import
         function saveToLocalStorage() {
             localStorage.setItem("study_planner_app_state", JSON.stringify(appState));
         }
